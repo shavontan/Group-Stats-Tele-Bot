@@ -18,13 +18,13 @@ bot = telebot.TeleBot(API_KEY)
 ##### Bot commands on the menu icon #####
 commands = [
 BotCommand('greet', 'Say hi'),
-BotCommand('help', 'Learn what you can do with this bot'),
+BotCommand('help', 'Help menu for dummies'),
 BotCommand('msgfrequency', 'Who always reply and who always MIA'),
 BotCommand('stickerfrequency', 'Who are the sticker lovers (or haters)'),
 BotCommand('ourmostusedsticker', 'Your group\'s favourite sticker'),
 BotCommand('mymostusedsticker', 'Your favourite sticker'),
-BotCommand('mymostusedwords', 'Words your friends are sick of hearing from you'),
-BotCommand('avgwords', 'Avg number of words per msg'),
+BotCommand('mymostusedwords', 'Your most used words'),
+BotCommand('avgwords', 'Avg msg length'),
 BotCommand('textorsticker', 'Use text or sticker more'),
 BotCommand('f', 'Press f to pay respects to Ahma'),
 ]
@@ -37,11 +37,11 @@ def greet(message):
 
 @bot.message_handler(commands=['f'])
 def payrespect(message):
-  bot.reply_to(message, "OI I haven't die yet la!")
+  bot.reply_to(message, "Oi I haven't die yet la!")
 
 @bot.message_handler(commands=['help'])
 def help(message):
-  bot.reply_to(message, "Harlo I am Sassy Stats Ahma! Dun think I old brain no good!\n\nUse this list of commands to learn about your group's texting habits and I'll send you my personal insights free-of-charge:\n\n/msgfrequency - See who active or who never talk lor\n/mymostusedwords - I tell you the words people so sian of hearing from you\n/stickerfrequency - See who like to stick stickers all the time.\n/ourmostusedsticker - I tell you your group's favourite sticker lor\n/mymostusedsticker - I tell you your favourite sticker lor\n/avgwords - See your average text length lor\n/textorsticker - I tell you who like to stick sticker and who like to text")
+  bot.reply_to(message, "Harlo I am Sassy Stats Ahma! Dun think I old brain no good!\n\nUse this list of commands to learn about your group's texting habits and I'll send you my personal insights free-of-charge:\n\n/msgfrequency - See who active or who never talk lor\n/mymostusedwords - I tell you the words people so sian of hearing from you\n/stickerfrequency - See who like to stick stickers all the time\n/ourmostusedsticker - I tell you your group's favourite sticker lor\n/mymostusedsticker - I tell you your favourite sticker lor\n/avgwords - See your average text length lor\n/textorsticker - I tell you who like to stick sticker and who like to text")
 
 @bot.message_handler(commands=['msgfrequency'])
 def msgfrequency(message):
@@ -74,8 +74,9 @@ def msgfrequency(message):
   bot.send_photo(message.chat.id, photo=open(f'{chat_id}.png', 'rb'))
 
   winners = ', '.join(find_winners(data, names))
+  losers = ', '.join(find_losers(data, names))
 
-  bot.send_message(message.chat.id, "{}, go get a life!".format(winners))
+  bot.send_message(message.chat.id, "{}, you should go get a life!\n{}, you still alive or not sia. Can reply?".format(winners, losers))
 
 
 @bot.message_handler(commands=['avgwords'])
@@ -115,18 +116,6 @@ def avgWordsPerMsg(message):
   all_colors = list(plt.cm.colors.cnames.keys())
   random.seed(100)
   c = random.choices(all_colors, k=len(names))
-
-  # vertical barplot
-  # plt.bar(names, data, color=c)
-  # plt.title("Who Sends the Longest Message?")
-  # plt.ylabel('Av. number of words per msg')
-  # plt.xlabel('Name')
-
-  # horizontal barplot
-  # plt.barh(names, data, color=c)
-  # plt.title("Who Sends the Longest Message?")
-  # plt.ylabel('Name')
-  # plt.xlabel('Av. number of words per msg')
 
   # # violin plot
   fig, ax = plt.subplots()
@@ -209,7 +198,6 @@ def myMostUsedWords(message):
   plt.clf()
   bot.send_photo(message.chat.id, photo=open(f'{chat_id}.png', 'rb'))
 
-  # bot.reply_to(message, "{}, your most common word is: {}".format(name, maxKey))
   bot.reply_to(message, "{}, please ah I sian of hearing these words from you liao. Dun say '{}' again pls. Go expand your vocab!".format(name, maxKey))
   
   
@@ -241,7 +229,7 @@ def num_stickers(message):
 
   winners = ', '.join(find_winners(data, names))
 
-  bot.send_message(message.chat.id, "{}, your grandmother will be so proud of you, she will buy you a sticker book.".format(winners))
+  bot.send_message(message.chat.id, "{}, you think your ahma will be so proud of you and buy you a sticker book? No, she will disown you.".format(winners))
 
 @bot.message_handler(commands='mymostusedsticker')
 def myMostUsedSticker(message):
@@ -256,7 +244,7 @@ def myMostUsedSticker(message):
       most_used_sticker = pair[0]
     
   bot.send_sticker(chat_id, most_used_sticker)
-  bot.send_message(message.chat.id, "You sent this {} times. Why you like it so much?".format(highest_freq))
+  bot.send_message(message.chat.id, "You sent this {} times. Why you like it so much ah?".format(highest_freq))
 
 @bot.message_handler(commands='ourmostusedsticker')
 def groupMostUsedSticker(message):
@@ -285,11 +273,17 @@ def text_sticker_frequnecy(message):
   sticker_data = []
   text_data = []
   chat_id = str(message.chat.id)
+  sticker_people = ""
   
   for person in db[chat_id]:
-    names.append(db[chat_id][person]["first_name"])
-    sticker_data.append(db[chat_id][person]["total_stickers"])
-    text_data.append(len(db[chat_id][person]["history"]))
+    name = db[chat_id][person]["first_name"]
+    total_stickers = db[chat_id][person]["total_stickers"]
+    total_messages = len(db[chat_id][person]["history"])
+    names.append(name)
+    sticker_data.append(total_stickers)
+    text_data.append(total_messages)
+    if total_stickers > total_messages:
+      sticker_people += name + ", "
   
   X_axis = np.arange(len(names))
   
@@ -305,6 +299,11 @@ def text_sticker_frequnecy(message):
   plt.savefig(chat_id)
   plt.clf()
   bot.send_photo(message.chat.id, photo=open(f'{chat_id}.png', 'rb'))
+
+  if sticker_people == "":
+    bot.send_message(message.chat.id, "I like you people, never stick sticker...")
+  else: 
+    bot.send_message(message.chat.id, "{}stick so many sticker, later police catch ah!".format(sticker_people))
   
 ##### Storing to database ##### 
 # Function that adds message to the database
@@ -359,5 +358,18 @@ def find_winners(data, names):
       if data[i] == max_val:
         winners.append(names[i])
   return winners
-      
+
+def find_losers(data, names):
+  min_val = min(data)
+  freq = data.count(min_val)
+  losers = []
+  if freq == 1:
+    index = data.index(min_val)
+    losers.append(names[index])
+  else:
+    for i in range(len(data)):
+      if data[i] == min_val:
+        losers.append(names[i])
+  return losers
+
 bot.infinity_polling()
